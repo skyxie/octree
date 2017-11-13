@@ -19,56 +19,88 @@ RSpec.describe Octree do
     let(:octree) { Octree.new(points) }
     let(:sol) { [5.0e-06,0.0,0.0] }
 
-    xit 'should find k closest locations to sol' do
-      expect(octree.nearest(3, sol)).to eql([
-        [54.367897,0.020886,19.827115],
+    it 'should not be a leaf' do
+      expect(octree).to_not be_leaf
+    end
+
+    it 'should have center(0,0,0)' do
+      expect(octree.center).to_not eql([0,0,0])
+    end
+
+    it 'should return expected items' do
+      expect(octree.nearest(3, sol).items.reverse).to eql([
+        [45.210918,0.003365,-16.008996],
         [54.905296,0.017912,3.787796],
-        [45.210918,0.003365,-16.008996]
+        [54.367897,0.020886,19.827115]
       ])
     end
   end
 
-  describe 'octant' do
-    it 'should work as a class method' do
-      expect(Octree.octant([0,0,0], [0,0,0])).to eql(0)
-      expect(Octree.octant([0,0,0], [1,0,0])).to eql(1)
-      expect(Octree.octant([0,0,0], [0,1,0])).to eql(2)
-      expect(Octree.octant([0,0,0], [1,1,0])).to eql(3)
-      expect(Octree.octant([0,0,0], [0,0,1])).to eql(4)
-      expect(Octree.octant([0,0,0], [1,0,1])).to eql(5)
-      expect(Octree.octant([0,0,0], [0,1,1])).to eql(6)
-      expect(Octree.octant([0,0,0], [1,1,1])).to eql(7)
+  2.times.each do |x|
+  2.times.each do |y|
+  2.times.each do |z|
+    octant = x + y*2 + z*4
+    point = [x, y, z]
+
+    describe "point=(#{point.join(',')}) octant=#{octant}" do
+      it "should map bit_array_to_octant" do
+        expect(Octree.bit_array_to_octant(point)).to eql(octant)
+      end
+
+      it "should map octant_to_bit_array" do
+        expect(Octree.octant_to_bit_array(octant)).to eql(point)
+      end
+
+      it "should calculate octant from origin" do
+        expect(Octree.octant([0,0,0], point)).to eql(octant)
+      end
+
+      it "should use instance to calculate octant from origin" do
+        octree = Octree.new([[1, 1, 0], [-1, -1, 0], [0, 1, 1], [0, -1, -1]])
+        expect(octree.octant(point)).to eql(octant)
+      end
+    end
+  end
+  end
+  end
+
+  describe 'octant with higher magnitude points' do
+    describe 'class method' do
+      subject { Octree.octant([0,0,0], point) }
+
+      describe 'with point (-15,-12,0)' do
+        let(:point) { [-15,-12,0] }
+        it { is_expected.to eql(0) }
+      end
+
+      describe 'with point (-15,-12,0)' do
+        let(:point) { [-0.00001,-0.000004,0.0000001] }
+        it { is_expected.to eql(4) }
+      end
     end
 
-    it 'should be binary and work the same for higher magnitudes' do
-      expect(Octree.octant([0,0,0], [-15,-12,0])).to eql(0)
-      expect(Octree.octant([0,0,0], [1,-22,0])).to eql(1)
-      expect(Octree.octant([0,0,0], [0,12,-1])).to eql(2)
-      expect(Octree.octant([0,0,0], [1,2,-231])).to eql(3)
-      expect(Octree.octant([0,0,0], [-0.1,-0.3,400])).to eql(4)
-      expect(Octree.octant([0,0,0], [0.1,-23,0.2])).to eql(5)
-      expect(Octree.octant([0,0,0], [-0.21,0.05,0.005])).to eql(6)
-      expect(Octree.octant([0,0,0], [0.3, 0.45, 100])).to eql(7)
-    end
+    describe 'with instance' do
+      let(:octree) { Octree.new(points) }
+      let(:points) { [[1, 1, 0], [-1, -1, 0], [0, 1, 1], [0, -1, -1]] }
+      subject { octree.octant(point) }
 
-    it 'should work as an instance method' do
-      octree = Octree.new([
-        [1, 1, 0],
-        [-1, -1, 0],
-        [0, 1, 1],
-        [0, -1, -1],
-      ])
+      it 'should be leaf' do
+        expect(octree).to be_leaf
+      end
 
-      expect(octree).to be_leaf
-      expect(octree.center).to eql([0, 0, 0])
-      expect(octree.octant([0,0,0])).to eql(0)
-      expect(octree.octant([1,0,0])).to eql(1)
-      expect(octree.octant([0,1,0])).to eql(2)
-      expect(octree.octant([1,1,0])).to eql(3)
-      expect(octree.octant([0,0,1])).to eql(4)
-      expect(octree.octant([1,0,1])).to eql(5)
-      expect(octree.octant([0,1,1])).to eql(6)
-      expect(octree.octant([1,1,1])).to eql(7)
+      it 'should have center(0,0,0)' do
+        expect(octree.center).to eql([0,0,0])
+      end
+
+      describe 'with point (-15,-12,0)' do
+        let(:point) { [-15, -12, 0] }
+        it { is_expected.to eql(0) }
+      end
+
+      describe 'with point (-15,-12,0)' do
+        let(:point) { [-0.00001, -0.000004, 0.0000001] }
+        it { is_expected.to eql(4) }
+      end
     end
   end
 end

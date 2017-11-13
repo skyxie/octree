@@ -10,7 +10,7 @@ class Octree
     branch_points = 8.times.map { [] }
     points.each { |pt| branch_points[octant(pt)] << pt }
 
-    if points.size <= 4
+    if size <= 4
       # Assuming all points are distinct (no 2 points are the same)
       # and there are at most 4 points, then there is at most 1 point in each
       # octant from the center point
@@ -18,7 +18,9 @@ class Octree
       @branches = branch_points
     else
       @leaf = false
-      @branches = branch_points.reject(&:empty?).map { |pts| Octree.new(pts, depth+1) }
+      @branches = branch_points.map do |pts|
+        pts.empty? ? [] : Octree.new(pts, depth+1)
+      end
     end
   end
 
@@ -33,7 +35,6 @@ class Octree
   end
 
   # Recursively finds the k nearest points to pt
-  # WARNING: Not quite working right now
   def nearest k, pt, acc_nearest=nil
     if acc_nearest.nil?
       acc_nearest = PriorityQueue.new(k) do |x|
@@ -44,35 +45,36 @@ class Octree
     end
 
     if leaf?
+      # On a leaf octree, add all points to the priority queue
       @branches.reject(&:empty?).each do |pts|
         pts.each do |pt|
           acc_nearest.add pt
         end
       end
     else
-      # Search matching index
-      pt_octant = octant pt
-      closest_branch = @branches[pt_octant]
-      if !closest_branch.empty?
-        closest_branch.nearest k, pt, acc_nearest
-      end
-
-      # If the index sufficients fulfilled requesnt, then there is nothing left
-      # to do, otherwise, search other octants
-      if !acc_nearest.full?
-        # Attempt to find alternative closest results at this branch
-        @branches.each.with_index do |branch, i|
-          next if branch.empty? || i == pt_octant
-          branch.nearest k, pt, acc_nearest
-        end
+      each_octant(pt) do |octant, dist|
+        # If nearest neighbors are insufficient or
+        # if neighbors may overlap into another octant,
+        # then continue processing octants
+        next if acc_nearest.full? && acc_nearest.max_weight < dist
+        branch = @branches[octant]
+        next if branch.nil? || branch.empty?
+        branch.nearest k, pt, acc_nearest
       end
     end
 
-    acc_nearest.items
+    acc_nearest
   end
 
+  # Finds the correct octant for a point relative to the center
   def octant pt
-    Octree.octant(@center, pt)
+    Octree.octant(center, pt)
+  end
+
+  def each_octant pt
+    Octree.each_octant(center, pt) do |octant, dist|
+      yield octant, dist
+    end
   end
 
   # Calculate the center of an array of points
@@ -95,8 +97,57 @@ class Octree
   # * Sum up values for each dimension to get the octant value
   #
   def self.octant a, b
-    a.zip(b).each.with_index.reduce(0) do |octant, (pair, i)|
-      octant + (pair[0] < pair[1] ? 1 : 0) * 2 ** i
+    bit_array_to_octant(bit_array(a, b))
+  end
+
+  # Indicates the octant for point b relative to a described by an array of bits
+  def self.bit_array a, b
+    a.zip(b).map { |pair| (pair[0] < pair[1]) ? 1 : 0 }
+  end
+
+  # Iterate through each octant around center in order by distance from pt
+  def self.each_octant center, pt
+    octant_idx = (0..7).to_a # Array of octant numbers
+    pt_bit_array = bit_array(center, pt) # Find octant for pt (as bit array)
+
+    octant_idx.map do |octant|
+      # Calc distance from point to octant as a projection of point on octant
+      # XOR bits to calculate projection vector
+      # [0, 1, 0] ^ [1, 1, 0] = [1, 0, 0] Different along x
+      # [0, 0, 0] ^ [1, 1, 0] = [1, 1, 0] Different along x and y
+      # [1, 1, 0] ^ [1, 1, 0] = [0, 0, 0] Same octant
+      # [0, 0, 0] ^ [1, 1, 1] = [1, 1, 1] Opposite, same as distance to center
+      # Square distance = projection * (center - point) ** 2
+      bit_pairs = octant_to_bit_array(octant).zip(pt_bit_array)
+      dist = bit_pairs.each.with_index.reduce(0) do |acc_dist, (bits, i)|
+        acc_dist + (bits[0] ^ bits[1]) * (center[i] - pt[i]) ** 2
+      end
+
+      [octant, dist]
+    end.sort_by do |(octant, dist)|
+      dist # Sort octants by distance from pt
+    end.each do |(octant, dist)|
+      yield octant, dist  # Iterate through each octant
+    end
+  end
+
+  # Transform an array of bits to an integer
+  def self.bit_array_to_octant bits
+    bits.each.with_index.reduce(0) do |octant, (bit, i)|
+      octant + bit * 2 ** i
+    end
+  end
+
+  # Transform an integer to a bit array
+  def self.octant_to_bit_array octant, pow=2, bits=[0,0,0]
+    if octant >= 2 ** pow
+      bits[pow] = 1
+    end
+
+    if pow > 0
+      octant_to_bit_array(octant - bits[pow] * 2 ** pow, pow - 1, bits)
+    else
+      bits
     end
   end
 end
