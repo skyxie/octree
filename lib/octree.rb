@@ -66,7 +66,6 @@ class Octree
     acc_nearest
   end
 
-  # Finds the correct octant for a point relative to the center
   def octant pt
     Octree.octant(center, pt)
   end
@@ -76,6 +75,10 @@ class Octree
       yield octant, dist
     end
   end
+
+  #
+  # Class functions
+  #
 
   # Calculate the center of an array of points
   def self.center points
@@ -101,6 +104,10 @@ class Octree
   end
 
   # Indicates the octant for point b relative to a described by an array of bits
+  #
+  # NOTE: I am aware that the signs here are somewhere inverted from common
+  # mathematical perceptions of octants (e.g. [-1, -1, -1] is in octant 0 and
+  # [1, 1, 1] is in octant 7), but this makes handling some of the bits easier
   def self.bit_array a, b
     a.zip(b).map { |pair| (pair[0] < pair[1]) ? 1 : 0 }
   end
@@ -108,26 +115,29 @@ class Octree
   # Iterate through each octant around center in order by distance from pt
   def self.each_octant center, pt
     octant_idx = (0..7).to_a # Array of octant numbers
-    pt_bit_array = bit_array(center, pt) # Find octant for pt (as bit array)
 
     octant_idx.map do |octant|
-      # Calc distance from point to octant as a projection of point on octant
-      # XOR bits to calculate projection vector
-      # [0, 1, 0] ^ [1, 1, 0] = [1, 0, 0] Different along x
-      # [0, 0, 0] ^ [1, 1, 0] = [1, 1, 0] Different along x and y
-      # [1, 1, 0] ^ [1, 1, 0] = [0, 0, 0] Same octant
-      # [0, 0, 0] ^ [1, 1, 1] = [1, 1, 1] Opposite, same as distance to center
-      # Square distance = projection * (center - point) ** 2
-      bit_pairs = octant_to_bit_array(octant).zip(pt_bit_array)
-      dist = bit_pairs.each.with_index.reduce(0) do |acc_dist, (bits, i)|
-        acc_dist + (bits[0] ^ bits[1]) * (center[i] - pt[i]) ** 2
-      end
-
-      [octant, dist]
+      [octant, distance_octant_pt(center, octant, pt)]
     end.sort_by do |(octant, dist)|
-      dist # Sort octants by distance from pt
+      dist # Sort octants by distance
     end.each do |(octant, dist)|
       yield octant, dist  # Iterate through each octant
+    end
+  end
+
+  # Calc distance from point to octant as a projection of point on octant
+  # XOR bits to calculate projection vector
+  # [0, 1, 0] ^ [1, 1, 0] = [1, 0, 0] Different along x
+  # [0, 0, 0] ^ [1, 1, 0] = [1, 1, 0] Different along x and y
+  # [1, 1, 0] ^ [1, 1, 0] = [0, 0, 0] Same octant
+  # [0, 0, 0] ^ [1, 1, 1] = [1, 1, 1] Opposite, same as distance to center
+  # Square distance = projection * (center - point) ** 2
+  def self.distance_octant_pt center, octant, pt
+    pt_bit_array = bit_array(center, pt) # Find octant for pt (as bit array)
+    octant_bit_array = octant_to_bit_array(octant)
+    bit_pairs = octant_bit_array.zip(pt_bit_array)
+    bit_pairs.each.with_index.reduce(0) do |acc_dist, (bits, i)|
+      acc_dist + (bits[0] ^ bits[1]) * (center[i] - pt[i]) ** 2
     end
   end
 

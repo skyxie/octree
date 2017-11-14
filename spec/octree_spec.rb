@@ -36,6 +36,47 @@ RSpec.describe Octree do
     end
   end
 
+  describe "distance_octant_pt" do
+    let(:center) { [0,0,0] }
+    let(:point) { [-1, -1, -1] }
+    subject { Octree.distance_octant_pt(center, octant, point) }
+
+    describe "when octant contains point" do
+      let(:octant) { 0 }
+      it { is_expected.to eql(0) }
+    end
+
+    describe "when octant is adjacent to point octant along x" do
+      let(:octant) { 1 }
+      it { is_expected.to eql(1) }
+    end
+
+    describe "when octant is adjacent to point octant along y" do
+      let(:octant) { 2 }
+      it { is_expected.to eql(1) }
+    end
+
+    describe "when octant is adjacent to point octant along z" do
+      let(:octant) { 4 }
+      it { is_expected.to eql(1) }
+    end
+
+    describe "when octant is opposite along x and y" do
+      let(:octant) { 3 }
+      it { is_expected.to eql(2) }
+    end
+
+    describe "when octant is opposite along y and z" do
+      let(:octant) { 6 }
+      it { is_expected.to eql(2) }
+    end
+
+    describe "when octant is opposite along all axis" do
+      let(:octant) { 7 }
+      it { is_expected.to eql(3) }
+    end
+  end
+
   2.times.each do |x|
   2.times.each do |y|
   2.times.each do |z|
