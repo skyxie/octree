@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'octree'
-  s.version     = '0.0.0'
+  s.version     = '0.0.1'
   s.date        = '2017-11-12'
   s.summary     = "Implementation of an octree"
   s.description = "My own toy implementation of an octree"

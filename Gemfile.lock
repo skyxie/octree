@@ -1,8 +1,8 @@
 GIT
   remote: https://github.com/skyxie/priority_queue
-  revision: 7703641ac8c90ce59edd37c4218755ba72213929
+  revision: 23f6062cc424883421fd17c837abad2ffef09603
   specs:
-    priority_queue (0.0.1)
+    priority_queue (0.0.3)
 
 PATH
   remote: .
@@ -32,7 +32,7 @@ PLATFORMS
 
 DEPENDENCIES
   octree!
-  priority_queue (= 0.0.1)!
+  priority_queue (= 0.0.3)!
   rspec (~> 3.0)
 
 BUNDLED WITH

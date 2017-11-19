@@ -28,7 +28,7 @@ RSpec.describe Octree do
     end
 
     it 'should return expected items' do
-      expect(octree.nearest(3, sol).items.reverse).to eql([
+      expect(octree.nearest(3, sol).items).to eql([
         [45.210918,0.003365,-16.008996],
         [54.905296,0.017912,3.787796],
         [54.367897,0.020886,19.827115]

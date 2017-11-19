@@ -1,5 +1,5 @@
 
-require 'priority_queue'
+require 'weighted_queue'
 
 class Octree
   def initialize points, depth=0
@@ -37,7 +37,7 @@ class Octree
   # Recursively finds the k nearest points to pt
   def nearest k, pt, acc_nearest=nil
     if acc_nearest.nil?
-      acc_nearest = PriorityQueue.new(k) do |x|
+      acc_nearest = WeightedQueue.new(k) do |x|
         pt.zip(x).reduce(0) do |dist, (a, b)|
           dist + (a - b) ** 2
         end
